@@ -6,7 +6,7 @@ Team Members:
   - Zach Brown
   - Khristian East
   - Anthony Burrows
-  - Damion Daniels
+  - Diamon Daniels
 
 Date Started: 2025-04-24
 Class: CS4500 – Introduction to Software Profession
@@ -20,6 +20,7 @@ and generates various outputs:
   • HeatMap.txt       – a heat-map representation
 """
 
+import csv
 import os
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
@@ -29,6 +30,80 @@ print(
     "SG3: This program reads and validates a species-abundance CSV, "
     "then outputs species list, dated data, presence/absence, and a heat map."
 )
+input('Press ENTER to continue')
+
+def validate_file_dates(csv_dates): #ensure all dates are valid; csv_dates- list of lists where first element is a date
+    for i in range(1, len(csv_dates)):
+        date_value = csv_dates[i][0].split("/") #split into list of month, day, year
+        date_value = is_invalid_date(date_value) 
+        if date_value:
+            input(f"error: {csv_dates[i][0]} in line {i} is an illegel date. Reason: invalid {date_value}\nPress ENTER to exit program")
+            exit()
+    return
+
+def is_invalid_date(date_value): #date_value is a list of strings in [MM, DD, YYYY]
+    if len(date_value[2]) != 4: #make sure year is 4 characters long
+        return "year"
+    month = int(date_value[0])
+    day = int(date_value[1])
+    year = int(date_value[2])
+    day_ranges = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    if year % 4 == 0: #exception for February
+        if year % 100 != 0 or year % 400 == 0: #if leap year
+            day_ranges[2] = 29
+    if not (month > 0 and month <= 12): # if month is invalid
+        return "month"
+    elif not (day > 0 and day <= day_ranges[month]):  #if the day does not exist in current month
+        return "day"
+    return "" #return empty string if date is valid
+
+def validate_numbers(csv_list, N): #ensure all numbers in list are valid; csv_list is a list of csv data stored in a list, N is an integer representing how many numbers should be in each line
+    for num in csv_list:
+        if len(num[1:]) != N: #if the amount of numbers in the line if not the same as the number of names in the header
+            input(f"error: {num[1:]} in line {csv_list.index(num) + 1} is illegal. Reason: wrong amount of numbers ({len(num[1:])} numbers). There should be {N} numbers per line\nPress ENTER to terminate program") #https://www.geeksforgeeks.org/python-list-index/
+            exit()
+        else:
+            for val in num[1:]:
+                if not is_number_valid(val):
+                    input(f"error: {val} in line {csv_list.index(num) + 1} is illegal. Reason: not a valid number\nPress ENTER to terminate program")
+                    exit()
+
+def is_number_valid(val): #validate single number string; val is the number to be tested; returns boolean value of whether the given string passes all validity tests
+    try:
+        return float(val) >= 0 and val[0] != '.' #only returns true if val is a number, positive, and correctly formatted
+    except ValueError: #if float() fails
+        return False
+    
+def find_duplicate_pa(dict_list):
+    # Dictionary to store Present/Absent patterns and their dates
+    pa_tracker = {}
+    
+    # add all Present/Absent values and their date to pattern_tracker
+    for entry in dict_list:
+        pa = tuple(entry['Present/Absent']) # Convert the list to tuple so it can be used as a dict key
+        date = entry['Date']
+        
+        if pa in pa_tracker: # if the Present/Absent value is a key in the dict already add the date
+            pa_tracker[pa].append(date)
+        else: # otherwise start a new list with that Present/Absent value as the key and add date as a new list
+            pa_tracker[pa] = [date]
+
+    # find any Present/Absent values that have more than one date connected to them
+    duplicates = {
+        pa: dates 
+        for pa, dates in pa_tracker.items() 
+        if len(dates) > 1
+    }  
+    # store results back into a list of dicts
+    result = []
+    for pa, dates in duplicates.items():
+        result.append({
+            'PA': list(pa),  # Convert tuple back to list for output
+            'Dates': dates,
+            'Occurrences': len(dates)
+        })
+    
+    return result
 
 # --- Prompt until we get a .csv filename (any case) ---
 while True:
@@ -47,6 +122,25 @@ while True:
         print(f"Error: file '{filename}' not found in this directory.")
         filename = input("Enter the name of the CSV file: ")
 
+dates = []
+presence_absence = []
+header = []
+
+with open(filename, mode='r') as file:
+    csv_file = csv.reader(file)
+    csv_list = list(csv_file)
+    validate_file_dates(csv_list) #validate dates
+    header = csv_list[0]
+    validate_numbers(csv_list[1:], len(header) - 1) #validate the numbers in the list
+    dates = [row[0] for row in csv_list[1:]] #store first column from each row
+header.pop(0) #remove blank cell
+
+#display summary of species and dates and wait for 
+species_count = len(header)
+date_count = len(dates)
+print(f"{species_count} species and {date_count} dates were found in this file.")
+input("Press ENTER to continue")
+
 # --- Read and parse header for species names ---
 header_line = f.readline().strip()
 columns = header_line.split(",")
@@ -54,37 +148,51 @@ species_names = columns[1:]  # drop the date column
 
 # Write species names to Species.txt
 with open("Species.txt", "w") as species_file:
-    for name in species_names:
-        species_file.write(name + "\n")
+        species_file.write('\n'.join(header))
 print(f"Wrote {len(species_names)} species names to Species.txt")
-
-# --- Read remaining lines to collect dates ---
-dates = []
-for line in f:
-    line = line.strip()
-    if not line:
-        continue
-    dates.append(line.split(",")[0])
 
 # Write dates to DatedData.txt
 with open("DatedData.txt", "w") as date_file:
-    for d in dates:
-        date_file.write(d + "\n")
+    date_file.write('\n'.join(dates))
 print(f"Wrote {len(dates)} dates to DatedData.txt")
 
-# --- Compute presence/absence vectors ---
-presence_absence = []
-with open(filename, 'r') as csv_file:
-    next(csv_file)  # skip header
-    for line in csv_file:
-        parts = line.strip().split(",")[1:]
-        vector = ['1' if int(val) > 0 else '0' for val in parts]
-        presence_absence.append(vector)
 
-with open("PresentAbsent.txt", "w") as pa_file:
-    for vec in presence_absence:
-        pa_file.write(",".join(vec) + "\n")
+# --- Compute presence/absence vectors ---
+with open('PresentAbsent.txt', mode='w') as pa_file:
+    with open(filename, mode ='r') as in_file:
+        csv_file = csv.reader(in_file)
+        header = next(csv_file) #skip header row
+        pa_file.write(','.join(header) + '\n') #write header to 'PresentAbsent.txt'
+        
+        #processing each data row
+        for row in csv_file:
+        #convert numbers to 1 or 0- 1 if >0, 0 if 0
+            vector = ['1' if float(val) > 0 else '0' for val in row[1:]]
+            vector.insert(0, row[0])
+            pa_file.write(','.join(vector) + '\n')
+            presence_absence.append({'Date': vector[0], 'Present/Absent': vector[1:]})
 print(f"Wrote {len(presence_absence)} presence/absence records to PresentAbsent.txt")
+
+#find max abundance measured on a date and all species with same abundance count
+with open(filename, mode = 'r') as f:
+    csv_file = csv.reader(f)
+    next(csv_file)
+    for row in csv_file:
+        numbers = []
+        for s in row[1:]: 
+            numbers.append(float(s)) #change abundance counts to float and append them to numbers
+        max_abundance = max(numbers)
+        indexes = [] 
+        for i, num in enumerate(numbers): #add all indexes of species that match the max_abundance amount
+            if num == max_abundance:
+                indexes.append(i)
+
+        species_with_max = ', '.join([header[i+1] for i in indexes]) #create a string with all species of the same max abundance count
+        print(f"Date: {row[0]}, Max abundance: {max_abundance:g}, Species: {species_with_max}") #print required message with date abundance count and species
+
+duplicates = find_duplicate_pa(presence_absence)
+for duplicate in duplicates: #print any duplicates found
+    print(f"{duplicate['PA']} appears {duplicate['Occurrences']} times on these dates: {[date for date in duplicate['Dates']]}")
 
 # --- Build abundance_matrix for heat map ---
 abundance_matrix = []
@@ -173,5 +281,3 @@ if not found_species:
 
 # --- Polite exit ---
 input("All done! Press ENTER to finish the program.")
-
-
