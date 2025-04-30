@@ -1,23 +1,68 @@
 """
 Language: Python 3
 IDE: Thonny
+Created by: Zach Brown
 
+Build & Execution:
+  1. I ensured Python 3 was installed.
+  2. In a terminal, I installed dependencies:
+       pip install matplotlib
+  3. I then cloned the SG3 repository and change into its folder:
+       git clone https://github.com/zbkm7/SG3.git
+       cd SG3
+  4. I place my CSV in the SG3 folder, then ran:
+       python sg3.py
+  
 Team Members:
-  - Zach Brown
+  - Zach Brown (Programmer)
   - Khristian East
   - Anthony Burrows
   - Diamon Daniels
 
-Date Started: 2025-04-24
+Date Started: 2025-04-23
+Date Submitted: 2025-05-29
 Class: CS4500 – Introduction to Software Profession
 
 Program Description:
-SG3 reads a species-abundance CSV file, validates its structure and contents,
-and generates various outputs:
-  • Species.txt       – list of species names
-  • DatedData.txt     – list of dates
-  • PresentAbsent.txt – presence/absence vectors
-  • HeatMap.txt       – a heat-map representation
+  SG3 ingests a species-abundance CSV, validates its structure,
+  and produces these outputs:
+    • Species.txt       – newline list of species names
+    • DatedData.txt     – newline list of date strings
+    • PresentAbsent.txt – CSV of presence (1)/absence (0) per species
+    • HeatMap.txt       – ASCII L/M/H map per date
+    • HeatMap.png       – graphical heat map colored by abundance
+  Then it reports any dates or species sharing identical L/M/H patterns,
+  and finally waits for the user to press ENTER before exiting.
+
+Central Data Structures:
+  • species_names      – list[str] of column headers (species)
+  • dates              – list[str] of date strings from file
+  • presence_absence   – list[list[str]] of '1'/'0' per species per date
+  • abundance_matrix   – list[list[float]] raw counts per species per date
+  • thresholds         – list[tuple[float,float]] low/med cutoffs per species
+  • date_groups        – dict mapping L/M/H tuples to lists of dates
+  • species_groups     – dict mapping L/M/H tuples to lists of species
+
+External Files:
+  Input:
+    • validfile.csv     – comma-first-field date, then numeric abundance columns
+  Outputs:
+    • Species.txt, DatedData.txt, PresentAbsent.txt,
+      HeatMap.txt, HeatMap.png
+
+External Resources (Sources):
+**I got most of the code from our Previous Projects!**
+
+matplotlib pyplot (https://matplotlib.org/stable/api/_as_gen/matplotlib.colors.LinearSegmentedColormap.html):
+     - For plotting 2D matrix heat map.
+LinearSegmentedColormap (https://matplotlib.org/stable/index.html):
+     - I figured out how to create custom yellow→orange→red gradients.
+defaultdict grouping (docs.python.org/3/library/collections.html#collections.defaultdict):
+     - I learned how grouping keys worked to lists without key-existence checks.
+Python packaging (pip.pypa.io):
+     - Ensuring matplotlib installation.
+
+
 """
 
 import csv
@@ -26,6 +71,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from collections import defaultdict
 
+# Entry message to user
 print(
     "SG3: This program reads and validates a species-abundance CSV, "
     "then outputs species list, dated data, presence/absence, and a heat map."
@@ -209,8 +255,8 @@ species_maxs = [max(col) for col in zip(*abundance_matrix)]
 thresholds = []
 for mn, mx in zip(species_mins, species_maxs):
     span = mx - mn
-    t1 = mn + span/3
-    t2 = mn + 2*span/3
+    t1 = mn + span/3  # 1/3 cutoff
+    t2 = mn + 2*span/3  # 2/3 cutoff
     thresholds.append((t1, t2))
 
 # --- Write ASCII heat map to HeatMap.txt ---
@@ -225,7 +271,7 @@ with open("HeatMap.txt", "w") as hm_file:
             else:
                 codes.append("H")
         line = date + "," + ",".join(codes)
-        print(line)
+        print(line)              # echo to console
         hm_file.write(line + "\n")
 print("Wrote ASCII heat map to HeatMap.txt")
 
@@ -254,7 +300,7 @@ plt.imshow(abundance_matrix, aspect='auto', cmap=cmap)
 plt.colorbar(label='Abundance')
 plt.xticks(range(len(species_names)), species_names, rotation=45, ha='right')
 plt.yticks(range(len(dates)), dates)
-plt.title("Species Abundance Heat Map")
+plt.title('Species Abundance Heat Map')
 plt.tight_layout()
 plt.savefig("HeatMap.png")
 plt.show()
