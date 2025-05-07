@@ -1,7 +1,7 @@
 """
 Language: Python 3
 IDE: Thonny
-Created by: Zach Brown
+Created by: Zach Brown, Diamon Daniels
 
 Build & Execution:
   1. I ensured Python 3 was installed.
@@ -17,7 +17,7 @@ Team Members:
   - Zach Brown (Programmer)
   - Khristian East
   - Anthony Burrows
-  - Diamon Daniels
+  - Diamon Daniels (programmer)
 
 Date Started: 2025-04-23
 Date Submitted: 2025-05-29
@@ -111,7 +111,7 @@ def validate_numbers(csv_list, N): #ensure all numbers in list are valid; csv_li
         else:
             for val in num[1:]:
                 if not is_number_valid(val):
-                    input(f"error: {val} in line {csv_list.index(num) + 1} is illegal. Reason: not a valid number\nPress ENTER to terminate program")
+                    input(f"error: {val} in line {csv_list.index(num) + 1} is illegal. Reason: negative numbers are not allowed for an abundance count\nPress ENTER to terminate program")
                     exit()
 
 def is_number_valid(val): #validate single number string; val is the number to be tested; returns boolean value of whether the given string passes all validity tests
